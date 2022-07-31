@@ -22,7 +22,7 @@ func initDB(setMaxOpenConns int, setMaxIdleConns int) (err error) {
 	if err != nil {
 		return err
 	}
-    //defer db.Close() // 断开连接
+	//defer db.Close() // 断开连接
 	// 尝试与数据库建立连接（校验dsn是否正确）
 	err = db.Ping()
 
@@ -45,23 +45,27 @@ func main() {
 
 	fmt.Printf("连接成功\n")
 
+	// 查询一条
 	queryRowDemo()
 
+	// 查询多条
+	queryMultiRowDemo()
+
+	// 插入数据
+	insertRowDemo()
 	return
 }
-
 
 // CRUD
 
 type user struct {
-	id int
-	name string
+	id       int
+	name     string
 	password string
-	address string
-	phone string
-	money int
+	address  string
+	phone    string
+	money    int
 }
-
 
 // 查询单条数据示例
 func queryRowDemo() {
@@ -78,9 +82,8 @@ func queryRowDemo() {
 }
 
 // 多行查询
-func queryMultiRowDemo()  {
+func queryMultiRowDemo() {
 	sqlStr := "select id, name, password, address, phone,money  from `user` where id > ?"
-	var u user
 	rows, err := db.Query(sqlStr, 0)
 	if err != nil {
 		fmt.Printf("query failed, err:%v\n", err)
@@ -91,9 +94,40 @@ func queryMultiRowDemo()  {
 
 	// 循环读取结果集中的数据
 	for rows.Next() {
-		
+		var u user
+		err := rows.Scan(&u.id, &u.name, &u.password, &u.address, &u.phone, &u.money)
+		if err != nil {
+			fmt.Printf("scan failed, err:%v\n", err)
+			return
+		}
+		fmt.Printf("date: %+v\n", u)
 	}
-
-
-
 }
+
+// 插入数据
+func insertRowDemo() {
+	sqlStr := "insert into user(name,password,address,phone,money) value(?, ?, ?, ?, ?)"
+	exec, err := db.Exec(sqlStr, "小福", "123456", "宇宙", "17676767676", "100")
+	if err != nil {
+		fmt.Printf("insert failed, err:%v\n", err)
+		return
+	}
+	id, err := exec.LastInsertId() // 新插入数据的id
+
+	if err != nil {
+		fmt.Printf("get lastinsert ID failed, err:%v\n", err)
+		return
+	}
+	fmt.Printf("insert success, the id is %d.\n", id)
+}
+
+// 更新数据
+func updateRowDemo() {
+	sqlStr := "update user set money = ? where id = ?"
+	exec, err := db.Exec(sqlStr, 20, 3)
+	if err != nil {
+
+	}
+}
+
+// 删除数据
