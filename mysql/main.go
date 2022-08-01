@@ -45,14 +45,51 @@ func main() {
 
 	fmt.Printf("连接成功\n")
 
+	/**
+	CRUD
+	 */
 	// 查询一条
-	queryRowDemo()
+	//fmt.Println("查询单条")
+	//queryRowDemo()
 
 	// 查询多条
-	queryMultiRowDemo()
+	//fmt.Println("查询多条")
+	//queryMultiRowDemo()
 
 	// 插入数据
-	insertRowDemo()
+	//fmt.Println("插入")
+	//insertRowDemo()
+
+	// 修改数据
+	//fmt.Println("修改")
+	//updateRowDemo()
+
+	// 删除数据
+	//deleteRowDemo()
+
+
+
+	/**
+	预处理
+	*/
+	//fmt.Println("预处理查询")
+	//prepareQueryDemo()
+
+	//fmt.Println("预处理新增")
+	//prepareInsertDemo()
+
+	// SQL注入
+	fmt.Println("SQL注入")
+	sqlInjectDemo("xxx' or 1=1#")
+	fmt.Println()
+	sqlInjectDemo("xxx' union select * from user #")
+	fmt.Println()
+	sqlInjectDemo("xxx' or (select count(*) from user) <10 #")
+
+	select {
+
+	}
+	db.Close()
 	return
 }
 
@@ -100,7 +137,7 @@ func queryMultiRowDemo() {
 			fmt.Printf("scan failed, err:%v\n", err)
 			return
 		}
-		fmt.Printf("date: %+v\n", u)
+		fmt.Printf("data: %+v\n", u)
 	}
 }
 
@@ -126,8 +163,123 @@ func updateRowDemo() {
 	sqlStr := "update user set money = ? where id = ?"
 	exec, err := db.Exec(sqlStr, 20, 3)
 	if err != nil {
-
+		fmt.Printf("update failed, err:%v\n", err)
+		return
 	}
+	n,err := exec.RowsAffected() // 操作影响的行数
+	if err != nil {
+		fmt.Printf("get RowsAffected failed, err:%v\n", err)
+		return
+	}
+	fmt.Printf("update success, affected rows:%d\n", n)
 }
 
 // 删除数据
+func deleteRowDemo() {
+	sqlStr := "delete from user where id = ?"
+	exec, err := db.Exec(sqlStr, 6)
+	if err != nil {
+		fmt.Printf("delete failed, err:%v\n", err)
+		return
+	}
+	n, err := exec.RowsAffected() // 操作影响的行数
+	if err != nil {
+		fmt.Printf("get RowsAffected failed, err:%v\n", err)
+		return
+	}
+	fmt.Printf("delete success, affected rows:%d\n", n)
+}
+
+
+// 预处理
+
+// 预处理查询
+func prepareQueryDemo() {
+	sqlStr := "select id, name, password, address, phone,money  from `user` where id > ?"
+	prepare, err := db.Prepare(sqlStr)
+
+	if err != nil {
+		fmt.Printf("prepare failed, err:%v\n", err)
+		return
+	}
+	defer prepare.Close()
+
+	rows, err := prepare.Query(0)
+
+	if err != nil {
+		fmt.Printf("query failed, err:%v\n", err)
+		return
+	}
+
+	defer rows.Close()
+
+	// 循环读取结果集中的数据
+	for rows.Next() {
+		var u user
+		err := rows.Scan(&u.id, &u.name, &u.password, &u.address, &u.phone, &u.money)
+		if err != nil {
+			fmt.Printf("scan failed, err:%v\n", err)
+			return
+		}
+
+		fmt.Printf("data: %+v\n", u)
+	}
+}
+
+// 预处理插入
+func prepareInsertDemo() {
+	sqlStr := "insert into user(name,password,address,phone,money) value(?, ?, ?, ?, ?)"
+	prepare, err := db.Prepare(sqlStr)
+
+	if err != nil {
+		fmt.Printf("prepare failed, err:%v\n", err)
+		return
+	}
+
+	defer prepare.Close()
+
+	result1, err := prepare.Exec("六便士", "123456", "书", "12345678900", "34")
+	if err != nil {
+		fmt.Printf("insert failed, err:%v\n", err)
+		return
+	}
+	id1, err := result1.LastInsertId() // 新插入数据的id
+	if err != nil {
+		fmt.Printf("get lastinsert ID failed, err:%v\n", err)
+		return
+	}
+	fmt.Printf("insert success, the id is %d.\n", id1)
+
+	result2, err := prepare.Exec("六便士1", "123456", "书", "12345678900", "34")
+	if err != nil {
+		fmt.Printf("insert failed, err:%v\n", err)
+		return
+	}
+	id2, err := result2.LastInsertId() // 新插入数据的id
+	if err != nil {
+		fmt.Printf("get lastinsert ID failed, err:%v\n", err)
+		return
+	}
+	fmt.Printf("insert success, the id is %d.\n", id2)
+
+}
+
+
+// SQL注入
+func sqlInjectDemo(name string) {
+	sqlStr := fmt.Sprintf("select id, name, password, address, phone,money from user where name='%s'", name)
+	fmt.Printf("SQL:%s\n", sqlStr)
+	var u user
+	err := db.QueryRow(sqlStr).Scan(&u.id, &u.name, &u.password, &u.address, &u.phone, &u.money)
+
+	if err != nil {
+		fmt.Printf("exec failed, err:%v\n", err)
+		return
+	}
+	fmt.Printf("user:%#v\n", u)
+}
+
+// 事务
+func transactionDemo() {
+	db.Begin()
+}
