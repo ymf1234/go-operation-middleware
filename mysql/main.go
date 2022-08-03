@@ -79,16 +79,16 @@ func main() {
 	//prepareInsertDemo()
 
 	// SQL注入
-	fmt.Println("SQL注入")
-	sqlInjectDemo("xxx' or 1=1#")
-	fmt.Println()
-	sqlInjectDemo("xxx' union select * from user #")
-	fmt.Println()
-	sqlInjectDemo("xxx' or (select count(*) from user) <10 #")
+	//fmt.Println("SQL注入")
+	//sqlInjectDemo("xxx' or 1=1#")
+	//fmt.Println()
+	//sqlInjectDemo("xxx' union select * from user #")
+	//fmt.Println()
+	//sqlInjectDemo("xxx' or (select count(*) from user) <10 #")
 
-	select {
 
-	}
+	// 事务
+	transactionDemo()
 	db.Close()
 	return
 }
@@ -281,5 +281,50 @@ func sqlInjectDemo(name string) {
 
 // 事务
 func transactionDemo() {
-	db.Begin()
+	tx, err := db.Begin() // 开启事务
+	if err != nil {
+		if tx != nil {
+			tx.Rollback() // 回滚
+		}
+		fmt.Printf("事务开启失败, err:%v\n", err)
+		return
+	}
+
+	sqlStr := "update user set money = 50 where id = ?"
+	ret1, err := tx.Exec(sqlStr, 2)
+	if err != nil {
+		tx.Rollback() // 回滚
+		fmt.Printf("执行sql1失败, err:%v\n", err)
+	}
+
+	affRow1, err := ret1.RowsAffected() // 操作影响的行数
+	if err != nil {
+		tx.Rollback() // 回滚
+		fmt.Printf("执行 ret1.RowsAffected() 失败, err:%v\n", err)
+		return
+	}
+	sqlStr2 := "update user set money = 50 where id = ?"
+	ret2, err := tx.Exec(sqlStr2, 3)
+	if err != nil {
+		tx.Rollback() // 回滚
+		fmt.Printf("执行sql1失败, err:%v\n", err)
+	}
+
+	affRow2, err := ret2.RowsAffected() // 操作影响的行数
+	if err != nil {
+		tx.Rollback() // 回滚
+		fmt.Printf("执行 ret2.RowsAffected() 失败, err:%v\n", err)
+		return
+	}
+
+	fmt.Println(affRow1, affRow2)
+	if affRow1 == 1 && affRow2 == 1 {
+		fmt.Println("事务提交啦...")
+		tx.Commit() // 提交事务
+	} else {
+		tx.Rollback()
+		fmt.Println("事务回滚啦...")
+	}
+
+	fmt.Println("执行事务成功")
 }
