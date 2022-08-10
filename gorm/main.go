@@ -78,7 +78,6 @@ func (m *mysqlModel) mysqlInit() {
 	})
 	//m.db, m.err = gorm.Open(mysql.Open(dsn), &gorm.Config{})
 	m.db, m.err = gorm.Open(dialector, &gorm.Config{})
-
 	if m.err != nil {
 		fmt.Printf("sqlite 连接失败, err: %v\n", m.err)
 		panic(m.err)
